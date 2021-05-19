@@ -191,7 +191,7 @@ class PostProcessing():
         return self._mapdl.get_value("ACTIVE", item1="SET", it1num='FREQ')
 
     def nodal_displacement(self, component='NORM') -> np.ndarray:
-        """Nodal X, Y, or Z structural displacement
+        """Nodal X, Y, or Z structural displacement.
 
         Equilvanent MAPDL command:
         ``PRNSOL, U, X``
@@ -205,11 +205,13 @@ class PostProcessing():
 
         Examples
         --------
+        Displacement in the X direction
+
         >>> mapdl.post_processing.nodal_displacement('X')
         array([1.07512979e-04, 8.59137773e-05, 5.70690047e-05, ...,
                5.70333124e-05, 8.58600402e-05, 1.07445726e-04])
 
-        Displacement in all dimensions
+        Displacement in all dimensions:
 
         >>> mapdl.post_processing.nodal_displacement('ALL')
         array([[ 1.07512979e-04,  6.05382076e-05, -1.64333622e-11],
@@ -220,7 +222,7 @@ class PostProcessing():
                [ 8.58600402e-05,  7.87561008e-05, -9.12531408e-12],
                [ 1.07445726e-04,  6.05003408e-05, -1.23634647e-11]])
 
-        Nodes corresponding to the nodal displacements
+        Nodes corresponding to the nodal displacements:
 
         >>> mapdl.mesh.nnum_all
         array([   1,    2,    3, ..., 7215, 7216, 7217], dtype=int32)
@@ -245,7 +247,7 @@ class PostProcessing():
         return self._ndof_rst('U', component)
 
     def plot_nodal_displacement(self, component='NORM', show_node_numbering=False,
-                                **kwargs):
+                                show_displacement=False, **kwargs):
         """Plot nodal displacement
 
         Parameters
@@ -254,6 +256,10 @@ class PostProcessing():
             Structural displacement component to retrieve.  Must be
             ``'X'``, ``'Y'``, ``'Z'``, or ``'NORM'``.  Defaults to
             ``'NORM'``.
+
+        show_displacement : bool, optional
+            Show an undeformed wireframe of the mesh as well as the
+            deformed mesh.
 
         Returns
         --------
@@ -264,7 +270,7 @@ class PostProcessing():
 
         Examples
         --------
-        Plot the normalized nodal displacement for the second result
+        Plot the normalized nodal displacement for the second result.
 
         >>> mapdl.post1()
         >>> mapdl.set(1, 2)
@@ -283,16 +289,22 @@ class PostProcessing():
                                  'single displacement component (e.g. "X")')
 
         disp = self.nodal_displacement(component)
-        kwargs.setdefault('stitle', '%s Displacement' % component)
+        kwargs.setdefault('stitle', f'{component} Displacement')
         return self._plot_point_scalars(disp, show_node_numbering=show_node_numbering,
-                                        **kwargs)
+                                        show_displacement=show_displacement, **kwargs)
 
-    def _plot_point_scalars(self, scalars, show_node_numbering=False, **kwargs):
+    def _plot_point_scalars(self, scalars, show_node_numbering=False,
+                            show_displacement=False, **kwargs):
         """Plot point scalars
 
         Assumes scalars are from all nodes and not just the active surface.
         """
         surf = self._mapdl.mesh._surf
+
+        disp = None
+        if show_displacement:
+            # get the displacement of the entire mesh
+            disp = self.nodal_displacement('ALL')
 
         # as ``disp`` returns the result for all nodes, we need all node numbers
         # and to index to the output node numbers
@@ -305,17 +317,33 @@ class PostProcessing():
         ridx = np.argsort(np.argsort(surf['ansys_node_num']))
         if scalars.size != mask.size:
             scalars = scalars[self.selected_nodes]
-        scalars = scalars[mask][ridx]
+            if disp is not None:
+                disp = disp[self.selected_nodes]
 
-        meshes = [{'mesh': surf.copy(deep=False),  # deep=False for ipyvtk-simple
-                   'scalar_bar_args': {'title': kwargs.pop('stitle', '')},
+        scalars = scalars[mask][ridx]
+        if disp is not None:  # deform the mesh
+            disp = disp[mask][ridx]
+            plot_mesh = surf.copy()
+            plot_mesh.points += disp
+        else:
+            plot_mesh = surf.copy(deep=False)
+
+        title = kwargs.pop('stitle', '')
+        meshes = [{'mesh': plot_mesh,
+                   'scalar_bar_args': {'title': title},
                    'scalars': scalars}]
+
+        # add the undeformed mesh if applicable
+        if disp is not None:
+            # show the undeformed mesh
+            meshes.append({'mesh': surf.copy(deep=False),
+                           'style': 'wireframe', 'color': 'white'})
 
         labels = []
         if show_node_numbering:
             labels = [{'points': surf.points, 'labels': surf['ansys_node_num']}]
 
-        kwargs.setdefault('title', 'MAPDL Displacement')
+        kwargs.setdefault('title', title)
         return general_plotter(meshes, [], labels, **kwargs)
 
     @property
@@ -875,7 +903,7 @@ class PostProcessing():
 
         """
         scalars = self.nodal_eqv_stress
-        kwargs.setdefault('stitle', 'Nodal Equilvanent\nStress')
+        kwargs.setdefault('stitle', 'Nodal Equivalent\nStress')
         return self._plot_point_scalars(scalars,
                                         show_node_numbering=show_node_numbering,
                                         **kwargs)

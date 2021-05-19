@@ -1564,8 +1564,9 @@ class _MapdlCore(_MapdlCommands):
         return response.split('=')[1].strip()
 
     def modal_analysis(self, method='lanb', nmode='', freqb='', freqe='', cpxmod='',
-                       nrmkey='', modtype='', memory_option='', elcalc=False):
-        """Run a modal with basic settings analysis
+                       nrmkey='', modtype='', memory_option='', elcalc=False,
+                       **kwargs):
+        """Run a modal analysis with basic settings analysis.
 
         Parameters
         ----------
@@ -1705,26 +1706,14 @@ class _MapdlCore(_MapdlCommands):
         when eigensolutions are real.
 
         """
-        if nrmkey:
-            if nrmkey.upper() != 'OFF':
-                nrmkey = 'ON'
-        nrmkey = 'OFF'
-
-        with self.chain_commands:
-            self.slashsolu()
-            self.antype(2, 'new')
-            self.modopt(method, nmode, freqb, freqe, cpxmod, nrmkey, modtype)
-            self.bcsoption(memory_option)
-
-            if elcalc:
-                self.mxpand(elcalc='YES')
-
-        out = self.solve()
-        self.finish(mute=True)
-        return out
+        warnings.warn('Method depreciated in favor of '
+                      'mapdl.solution.run_modal_analysis', DeprecationWarning)
+        return self.solution.run_modal_analysis(method, nmode, freqb, freqe,
+                                                cpxmod, nrmkey, modtype,
+                                                memory_option, elcalc, **kwargs)
 
     def run_multiline(self, commands):
-        """Run several commands as a single block
+        """Run several commands as a single block.
 
         Parameters
         ----------

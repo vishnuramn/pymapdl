@@ -13,6 +13,7 @@ def general_plotter(meshes, points, labels,
                     savefig=None,
                     window_size=None,
                     notebook=None,
+                    show_scalar_bar=True,
                     # add_mesh kwargs:
                     color='w',
                     show_edges=None, edge_color=None, point_size=5.0,
@@ -56,6 +57,9 @@ def general_plotter(meshes, points, labels,
         When True, the resulting plot is placed inline a jupyter
         notebook.  Assumes a jupyter console is active.  Automatically
         enables off_screen.
+
+    show_scalar_bar : bool, optional
+        When ``False``, hides any added scalar bars.
 
     show_bounds : bool, optional
         Shows mesh bounds when ``True``.
@@ -150,6 +154,7 @@ def general_plotter(meshes, points, labels,
         pl.add_mesh(mesh['mesh'],
                     scalars=mesh.get('scalars'),
                     scalar_bar_args=scalar_bar_args,
+                    style=mesh.get('style', 'surface'),
                     color=mesh.get('color', color),
                     show_edges=show_edges, edge_color=edge_color,
                     smooth_shading=smooth_shading,
@@ -159,6 +164,9 @@ def general_plotter(meshes, points, labels,
                     interpolate_before_map=interpolate_before_map,
                     cmap=cmap, render_points_as_spheres=render_points_as_spheres,
                     render_lines_as_tubes=render_lines_as_tubes)
+
+    if show_scalar_bar is False:
+        pl.remove_scalar_bar()
 
     for label in labels:
         # verify points are not duplicates
@@ -172,9 +180,6 @@ def general_plotter(meshes, points, labels,
                             font_family=font_family,
                             text_color=text_color)
 
-    # if stitle is not None:
-    #     pl.add_scalar_bar(title=stitle)
-
     if cpos:
         pl.camera_position = cpos
 
@@ -183,6 +188,7 @@ def general_plotter(meshes, points, labels,
 
     if show_axes:
         pl.show_axes()
+
     if title:
         pl.add_title(title)
 
