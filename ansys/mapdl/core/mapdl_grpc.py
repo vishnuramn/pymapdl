@@ -932,7 +932,7 @@ class MapdlGrpc(_MapdlCore):
 
     @protect_grpc
     def input(self, fname, verbose=False, progress_bar=False,
-              time_step_stream=None, chunk_size=512, **kwargs):
+              time_step_stream=None, chunk_size=512, mute=False, **kwargs):
         """Stream a local input file to a remote mapdl instance.
         Stream the response back and deserialize the output.
 
@@ -1016,6 +1016,9 @@ class MapdlGrpc(_MapdlCore):
             return response.strip()
 
         # otherwise, not verbose
+        if mute:
+            return self._mute_input()
+
         if time_step_stream is None:
             time_step_stream = 50
         metadata = [('time_step_stream', str(time_step_stream)),
@@ -1033,6 +1036,7 @@ class MapdlGrpc(_MapdlCore):
                 f.write(tmp_dat)
         else:
             self._upload_raw(tmp_dat.encode(), tmp_name)
+
         request = pb_types.InputFileRequest(filename=tmp_name)
 
         # even though we don't care about the output, we still
@@ -1048,6 +1052,10 @@ class MapdlGrpc(_MapdlCore):
 
         # otherwise, read remote file
         return self._download_as_raw(tmp_out).decode('latin-1')
+
+    def _mute_input(self):
+        """Used when input is muted"""
+        pass
 
     def _flush_stored(self):
         """Writes stored commands to an input file and runs the input
